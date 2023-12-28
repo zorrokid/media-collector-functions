@@ -15,9 +15,6 @@ initializeApp();
 
 
 export const onFileUpload = onObjectFinalized(async (event) => {
-  logger.info(event);
-  logger.info("Got file uploaded to bucket", event.bucket);
-  logger.info("Object data is ", event.data);
   const bucketName = event.data.bucket;
   const filePath = event.data.name;
   const file = getStorage()

@@ -1,11 +1,3 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
 import {initializeApp} from "firebase-admin/app";
 import {setGlobalOptions} from "firebase-functions/v2";
 
@@ -17,9 +9,6 @@ import {parse} from "csv-parse";
 import * as logger from "firebase-functions/logger";
 import * as path from "path";
 import {CollectionItem, ImportHistoryEntry} from "./types";
-
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
 
 setGlobalOptions({region: "europe-central2"});
 initializeApp();
@@ -52,7 +41,6 @@ export const onFileUpload = onObjectFinalized(async (event) => {
     conditionClassificationsMap.set(doc.data()["name"], doc.id);
   }
 
-  // TODO validate and parse file content
   const parser = parse({
     delimiter: ";",
     columns: true,
@@ -114,8 +102,3 @@ export const onFileUpload = onObjectFinalized(async (event) => {
       });
     });
 });
-
-
-// I want to create a function which trigger on firebase storage bucket upload
-// https://firebase.google.com/docs/storage/web/upload-files
-

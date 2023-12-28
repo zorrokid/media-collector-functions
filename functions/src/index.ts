@@ -47,7 +47,6 @@ export const onFileUpload = onObjectFinalized(async (event) => {
   readStream
     .pipe(parser)
     .on("data", async (data) => {
-      logger.info("Got data", data);
       const releaseAreaName = data["releaseArea"];
       if (!releaseAreasMap.has(releaseAreaName)) {
         const doc = await firestore.collection("releaseAreas").add({

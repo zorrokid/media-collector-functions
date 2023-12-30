@@ -25,6 +25,7 @@ export const onFileUpload = onObjectFinalized(async (event) => {
     .createReadStream();
 
   const firestore = getFirestore();
+  firestore.settings({ignoreUndefinedProperties: true});
 
   const releaseAreasMap = new Map<string, string>();
   const releaseAreasSnap = await firestore.collection("releaseAreas").get();
@@ -42,6 +43,12 @@ export const onFileUpload = onObjectFinalized(async (event) => {
   const parser = parse({
     delimiter: ";",
     columns: true,
+    cast: (value /* , context argument can be used to check column */) => {
+      if (value === "") {
+        return undefined;
+      }
+      return value;
+    },
   });
   let itemsImported = 0;
 
@@ -49,32 +56,29 @@ export const onFileUpload = onObjectFinalized(async (event) => {
     .pipe(parser)
     .on("data", async (data) => {
       logger.info("Start parsing item", data);
+
+      if (!data["sourceId"]) {
+        logger.warn("sourceId is missing, skipping item: ", data);
+      }
+
       const releaseAreaName = data["releaseArea"];
-      if (!releaseAreasMap.has(releaseAreaName)) {
+      if (releaseAreaName && !releaseAreasMap.has(releaseAreaName)) {
         const doc = await firestore.collection("releaseAreas").add({
           name: releaseAreaName,
         });
         releaseAreasMap.set(releaseAreaName, doc.id);
       }
       const conditionClassificationName = data["conditionClassification"];
-      if (!conditionClassificationsMap.has(conditionClassificationName)) {
+      if (conditionClassificationName &&
+        !conditionClassificationsMap.has(conditionClassificationName)) {
         const doc = await firestore.collection("conditionClassifications").add({
           name: conditionClassificationName,
         });
         conditionClassificationsMap.set(conditionClassificationName, doc.id);
       }
       const releaseAreaId = releaseAreasMap.get(releaseAreaName);
-      if (releaseAreaId === undefined) {
-        throw new Error("releaseAreaId is undefined");
-      }
       const conditionClassificationId = conditionClassificationsMap
         .get(conditionClassificationName);
-      if (conditionClassificationId === undefined) {
-        throw new Error("conditionClassificationId is undefined");
-      }
-      if (!data["sourceId"]) {
-        logger.warn("sourceId is missing, skipping item: ", data);
-      }
 
       const item: CollectionItem = {
         barcode: data["barcode"],
@@ -85,6 +89,7 @@ export const onFileUpload = onObjectFinalized(async (event) => {
         releaseAreaId,
         userId: data["userId"],
         sourceId: data["sourceId"],
+        originalName: data["originalName"],
       };
       const collectionItemsRef = firestore.collection("collectionItems");
 

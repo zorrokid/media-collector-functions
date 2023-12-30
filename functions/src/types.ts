@@ -12,4 +12,5 @@ export type CollectionItem = {
   releaseAreaId: string;
   releaseAreaName: string;
   userId: string;
+  sourceId: string;
 }

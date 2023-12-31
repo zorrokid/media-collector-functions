@@ -44,7 +44,7 @@ export const onFileUpload = onObjectFinalized(async (event) => {
     delimiter: "\t",
     columns: true,
     cast: (value /* , context argument can be used to check column */) => {
-      if (value === "") {
+      if (value.trim() === "") {
         return undefined;
       }
       return value;

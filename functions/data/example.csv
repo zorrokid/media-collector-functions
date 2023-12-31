@@ -1,3 +1,3 @@
-barcode;name;releaseArea;conditionClassification;userId;sourceId;originalName
-1234567890;Example;Nordic Countries;Mint;SomeUserId123456987;SomeSourceId123;Example original name
-1234567899;;;;SomeUserId123456987;SomeSourceId124;
+barcode	name	releaseArea	conditionClassification	userId	sourceId	originalName
+1234567890	Example	Nordic Countries	Mint	SomeUserId123456987	SomeSourceId123	Example original name
+1234567899				SomeUserId123456987	SomeSourceId124	

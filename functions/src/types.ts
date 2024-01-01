@@ -1,9 +1,3 @@
-export type ImportHistoryEntry = {
-  time: Date;
-  fileName: string;
-  itemsImported: number;
-}
-
 export type CollectionItem = {
   barcode?: string;
   conditionClassificationId?: string;

@@ -1,6 +1,6 @@
 import {Firestore} from "firebase-admin/firestore";
 
-interface ImportHistoryRepository {
+export interface ImportHistoryRepository {
     addHistoryEntry: (fileName: string, itemsImported: number) => Promise<void>;
 }
 

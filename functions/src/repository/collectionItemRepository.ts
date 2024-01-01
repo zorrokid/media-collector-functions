@@ -2,7 +2,7 @@ import {Firestore} from "firebase-admin/firestore";
 import {CollectionItem} from "../types";
 import * as logger from "firebase-functions/logger";
 
-interface CollectionItemRepository {
+export interface CollectionItemRepository {
     addOrUpdate: (collectionItem: CollectionItem) => Promise<CollectionItem>
 }
 

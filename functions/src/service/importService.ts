@@ -42,10 +42,11 @@ export const createImportService = (
         delimiter: "\t",
         columns: true,
         cast: (value /* , context argument can be used to check column */) => {
-          if (value.trim() === "") {
+          const valueTrimmed = value.trim();
+          if (valueTrimmed === "") {
             return undefined;
           }
-          return value;
+          return valueTrimmed;
         },
       });
 

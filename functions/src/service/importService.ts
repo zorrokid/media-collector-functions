@@ -48,7 +48,6 @@ export const createImportService = (
           return value;
         },
       });
-      let itemsImported = 0;
 
       readStream
         .pipe(parser)
@@ -93,12 +92,11 @@ export const createImportService = (
             originalName: data["originalName"],
           };
           await itemRepository.addOrUpdate(item);
-          itemsImported++;
         })
-        .on("end", async () => {
+        .on("close", async () => {
           logger.info(`Finished parsing file ${filePath}`);
           await importHistoryRepository
-            .addHistoryEntry(filePath, itemsImported);
+            .addHistoryEntry(filePath);
           file.delete().then(() => {
             logger.log("Upload file deleted successfully");
           }).catch((error) => {

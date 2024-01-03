@@ -13,6 +13,8 @@ import {createImportService} from "./service/importService";
 
 setGlobalOptions({region: "europe-central2"});
 initializeApp();
+const firestore = getFirestore();
+firestore.settings({ignoreUndefinedProperties: true});
 
 export const onFileUpload = onObjectFinalized(async (event) => {
   const bucketName = event.data.bucket;
@@ -20,7 +22,6 @@ export const onFileUpload = onObjectFinalized(async (event) => {
   logger.info(`New file uploaded to ${filePath} in bucket ${bucketName}`);
 
   const firestore = getFirestore();
-  firestore.settings({ignoreUndefinedProperties: true});
   const itemRepository = createCollectionItemRepository(firestore);
   const importHistoryRepository = createImportHistoryRepository(firestore);
   const importService = createImportService(

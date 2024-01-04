@@ -7,6 +7,7 @@ import {parse} from "csv-parse";
 import {getStorage} from "firebase-admin/storage";
 import * as logger from "firebase-functions/logger";
 import {CollectionItem} from "../types";
+import {finished} from "stream/promises";
 
 interface ImportService {
   import: (bucketName: string, filePath: string) => Promise<void>
@@ -22,8 +23,6 @@ export const createImportService = (
       const file = getStorage()
         .bucket(bucketName)
         .file(filePath);
-      const readStream = file
-        .createReadStream();
 
       const releaseAreasMap = new Map<string, string>();
       const releaseAreasSnap = await firestore.collection("releaseAreas").get();
@@ -50,8 +49,10 @@ export const createImportService = (
         },
       });
 
-      readStream
-        .pipe(parser)
+      const importItems: CollectionItem[] = [];
+      const cvsParser = file.createReadStream()
+        .pipe(parser);
+      cvsParser
         .on("data", async (data) => {
           logger.info("Start parsing item", data);
 
@@ -66,6 +67,8 @@ export const createImportService = (
             });
             releaseAreasMap.set(releaseAreaName, doc.id);
           }
+          const releaseAreaId = releaseAreasMap.get(releaseAreaName);
+
           const conditionClassificationName = data["conditionClassification"];
           if (conditionClassificationName &&
             !conditionClassificationsMap.has(conditionClassificationName)) {
@@ -77,11 +80,10 @@ export const createImportService = (
             conditionClassificationsMap
               .set(conditionClassificationName, doc.id);
           }
-          const releaseAreaId = releaseAreasMap.get(releaseAreaName);
           const conditionClassificationId = conditionClassificationsMap
             .get(conditionClassificationName);
 
-          const item: CollectionItem = {
+          importItems.push({
             barcode: data["barcode"],
             name: data["name"],
             conditionClassificationName,
@@ -91,22 +93,19 @@ export const createImportService = (
             userId: data["userId"],
             sourceId: data["sourceId"],
             originalName: data["originalName"],
-          };
-          await itemRepository.addOrUpdate(item);
-        })
-        .on("close", async () => {
-          logger.info(`Finished parsing file ${filePath}`);
-          await importHistoryRepository
-            .addHistoryEntry(filePath);
-          file.delete().then(() => {
-            logger.log("Upload file deleted successfully");
-          }).catch((error) => {
-            logger.error("Error deleting upload file", error);
           });
-        })
-        .on("error", (error) => {
-          logger.error("Error parsing file", error);
         });
+
+      await finished(cvsParser);
+      await itemRepository.addOrUpdate(importItems);
+      await importHistoryRepository
+        .addHistoryEntry(filePath, importItems.length);
+
+      file.delete().then(() => {
+        logger.info("Upload file deleted successfully");
+      }).catch((error) => {
+        logger.error("Error deleting upload file", error);
+      });
     },
   };
 };

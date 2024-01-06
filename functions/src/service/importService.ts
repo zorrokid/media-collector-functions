@@ -69,6 +69,8 @@ export const createImportService = (
           }
           const releaseAreaId = releaseAreasMap.get(releaseAreaName);
 
+          logger.info("releaseAreaId", releaseAreaId);
+
           const conditionClassificationName = data["conditionClassification"];
           if (conditionClassificationName &&
             !conditionClassificationsMap.has(conditionClassificationName)) {
@@ -83,7 +85,9 @@ export const createImportService = (
           const conditionClassificationId = conditionClassificationsMap
             .get(conditionClassificationName);
 
-          importItems.push({
+          logger.info("conditionClassificationId", conditionClassificationId);
+
+          const item = {
             barcode: data["barcode"],
             name: data["name"],
             conditionClassificationName,
@@ -93,11 +97,22 @@ export const createImportService = (
             userId: data["userId"],
             sourceId: data["sourceId"],
             originalName: data["originalName"],
-          });
+          };
+
+          logger.info("Create item", item);
+
+          importItems.push(item);
         });
 
       await finished(cvsParser);
+      logger.info("Finished parsing");
+      // TODO: "Start add or update with 0 items."
+      // => finished above is not waiting for items to have been created
+      // Check again this example:
+      // https://csv.js.org/parse/examples/promises/
+      // write to firestore in data event handler and await for finished
       await itemRepository.addOrUpdate(importItems);
+      logger.info("Finished add or update");
       await importHistoryRepository
         .addHistoryEntry(filePath, importItems.length);
 

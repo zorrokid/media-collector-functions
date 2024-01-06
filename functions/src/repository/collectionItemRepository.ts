@@ -11,7 +11,10 @@ export const createCollectionItemRepository = (
 ): CollectionItemRepository => {
   return {
     addOrUpdate: async (items: Array<CollectionItem>) => {
+      logger.info(`Start add or update with ${items.length} items.`);
       const collectionItemsRef = firestore.collection("collectionItems");
+      let addedItems = 0;
+      let updatedItems = 0;
       for (const item of items) {
         logger.info(`Start add or update for item with sourceId ${
           item.sourceId}`, item);
@@ -24,6 +27,7 @@ export const createCollectionItemRepository = (
             .add(item);
           logger.info(`Added new item with document id ${
             doc.id} from sourceId ${item.sourceId}`);
+          addedItems++;
         } else {
           if (existingItem.docs.length > 1) {
             throw new Error("More than one item with the same sourceId");
@@ -31,12 +35,13 @@ export const createCollectionItemRepository = (
           const documentId = existingItem.docs[0].id;
           logger.info(`Updating existing item with document id ${
             documentId} and sourceId ${item.sourceId}`);
-          await firestore
-            .collection("collectionItems")
-            .doc(documentId)
-            .set(item);
+          await existingItem.docs[0].ref
+            .set(item, {merge: true});
+          updatedItems++;
         }
       }
+      logger.info(`Added ${addedItems} items`);
+      logger.info(`Updated ${updatedItems} items`);
     },
   };
 };

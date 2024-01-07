@@ -6,7 +6,6 @@ import {ImportHistoryRepository}
 import {parse} from "csv-parse";
 import {getStorage} from "firebase-admin/storage";
 import * as logger from "firebase-functions/logger";
-import {CollectionItem} from "../types";
 import {finished} from "stream/promises";
 
 interface ImportService {
@@ -49,72 +48,66 @@ export const createImportService = (
         },
       });
 
-      const importItems: CollectionItem[] = [];
       const cvsParser = file.createReadStream()
         .pipe(parser);
-      cvsParser
-        .on("data", async (data) => {
-          logger.info("Start parsing item", data);
 
-          if (!data["sourceId"]) {
-            logger.warn("sourceId is missing, skipping item: ", data);
-          }
+      for await (const record of cvsParser) {
+        logger.info("1. Start parsing record", record);
 
-          const releaseAreaName = data["releaseArea"];
-          if (releaseAreaName && !releaseAreasMap.has(releaseAreaName)) {
-            const doc = await firestore.collection("releaseAreas").add({
-              name: releaseAreaName,
+        if (!record["sourceId"]) {
+          logger.warn("sourceId is missing, skipping item: ", record);
+        }
+
+        const releaseAreaName = record["releaseArea"];
+        if (releaseAreaName && !releaseAreasMap.has(releaseAreaName)) {
+          const doc = await firestore.collection("releaseAreas").add({
+            name: releaseAreaName,
+          });
+          releaseAreasMap.set(releaseAreaName, doc.id);
+        }
+        const releaseAreaId = releaseAreasMap.get(releaseAreaName);
+        logger.info("2. releaseAreaId", releaseAreaId);
+
+        const conditionClassificationName = record[
+          "conditionClassification"
+        ];
+        if (conditionClassificationName &&
+          !conditionClassificationsMap.has(conditionClassificationName)) {
+          const doc = await firestore
+            .collection("conditionClassifications")
+            .add({
+              name: conditionClassificationName,
             });
-            releaseAreasMap.set(releaseAreaName, doc.id);
-          }
-          const releaseAreaId = releaseAreasMap.get(releaseAreaName);
+          conditionClassificationsMap
+            .set(conditionClassificationName, doc.id);
+        }
+        const conditionClassificationId = conditionClassificationsMap
+          .get(conditionClassificationName);
+        logger.info("3. conditionClassificationId",
+          conditionClassificationId);
 
-          logger.info("releaseAreaId", releaseAreaId);
+        const item = {
+          barcode: record["barcode"],
+          name: record["name"],
+          conditionClassificationName,
+          conditionClassificationId,
+          releaseAreaName,
+          releaseAreaId,
+          userId: record["userId"],
+          sourceId: record["sourceId"],
+          originalName: record["originalName"],
+        };
 
-          const conditionClassificationName = data["conditionClassification"];
-          if (conditionClassificationName &&
-            !conditionClassificationsMap.has(conditionClassificationName)) {
-            const doc = await firestore
-              .collection("conditionClassifications")
-              .add({
-                name: conditionClassificationName,
-              });
-            conditionClassificationsMap
-              .set(conditionClassificationName, doc.id);
-          }
-          const conditionClassificationId = conditionClassificationsMap
-            .get(conditionClassificationName);
-
-          logger.info("conditionClassificationId", conditionClassificationId);
-
-          const item = {
-            barcode: data["barcode"],
-            name: data["name"],
-            conditionClassificationName,
-            conditionClassificationId,
-            releaseAreaName,
-            releaseAreaId,
-            userId: data["userId"],
-            sourceId: data["sourceId"],
-            originalName: data["originalName"],
-          };
-
-          logger.info("Create item", item);
-
-          importItems.push(item);
-        });
+        logger.info("4. Create item", item);
+        logger.info("5. Start add or update for item with sourceId");
+        await itemRepository.addOrUpdate(item);
+        logger.info("6. Finished add or update for item with sourceId");
+      }
 
       await finished(cvsParser);
       logger.info("Finished parsing");
-      // TODO: "Start add or update with 0 items."
-      // => finished above is not waiting for items to have been created
-      // Check again this example:
-      // https://csv.js.org/parse/examples/promises/
-      // write to firestore in data event handler and await for finished
-      await itemRepository.addOrUpdate(importItems);
-      logger.info("Finished add or update");
       await importHistoryRepository
-        .addHistoryEntry(filePath, importItems.length);
+        .addHistoryEntry(filePath, 0);
 
       file.delete().then(() => {
         logger.info("Upload file deleted successfully");

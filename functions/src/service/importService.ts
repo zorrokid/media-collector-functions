@@ -6,7 +6,6 @@ import {ImportHistoryRepository}
 import {parse} from "csv-parse";
 import {getStorage} from "firebase-admin/storage";
 import * as logger from "firebase-functions/logger";
-import {finished} from "stream/promises";
 
 interface ImportService {
   import: (bucketName: string, filePath: string) => Promise<void>
@@ -18,7 +17,7 @@ export const createImportService = (
   importHistoryRepository: ImportHistoryRepository,
 ): ImportService => {
   return {
-    import: async (bucketName: string, filePath: string) => {
+    import: async (bucketName: string, filePath: string): Promise<void> => {
       const file = getStorage()
         .bucket(bucketName)
         .file(filePath);
@@ -104,16 +103,13 @@ export const createImportService = (
         logger.info("6. Finished add or update for item with sourceId");
       }
 
-      await finished(cvsParser);
       logger.info("Finished parsing");
       await importHistoryRepository
         .addHistoryEntry(filePath, 0);
 
-      file.delete().then(() => {
-        logger.info("Upload file deleted successfully");
-      }).catch((error) => {
-        logger.error("Error deleting upload file", error);
-      });
+      logger.info("Deleting import file");
+      await file.delete();
+      return logger.info("Finished deleting import file");
     },
   };
 };

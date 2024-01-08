@@ -16,7 +16,9 @@ initializeApp();
 const firestore = getFirestore();
 firestore.settings({ignoreUndefinedProperties: true});
 
-export const onFileUpload = onObjectFinalized(async (event) => {
+export const onFileUpload = onObjectFinalized({
+  timeoutSeconds: 300,
+}, async (event) => {
   const bucketName = event.data.bucket;
   const filePath = event.data.name;
   logger.info(`New file uploaded to ${filePath} in bucket ${bucketName}`);
@@ -26,5 +28,5 @@ export const onFileUpload = onObjectFinalized(async (event) => {
   const importHistoryRepository = createImportHistoryRepository(firestore);
   const importService = createImportService(
     firestore, itemRepository, importHistoryRepository);
-  await importService.import(bucketName, filePath);
+  return await importService.import(bucketName, filePath);
 });
